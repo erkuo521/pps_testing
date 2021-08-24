@@ -7,12 +7,16 @@ import serial.tools.list_ports
 import struct
 
 preamble = bytearray.fromhex('5555')
-packet_def = {'s1': [40, bytearray.fromhex('7331')],\
-              'iN': [38, bytearray.fromhex('694E')],\
+packet_def = {'s1': [43, bytearray.fromhex('7331')],\
+              's2': [43, bytearray.fromhex('7332')],\
+              'iN': [45, bytearray.fromhex('694E')],\
+              'd1': [37, bytearray.fromhex('6431')],\
+              'd2': [31, bytearray.fromhex('6432')],\
+              'gN': [53, bytearray.fromhex('674E')],\
               'sT': [38, bytearray.fromhex('7354')]}
 
 class rtk330l:
-    def __init__(self, port, baud=115200, packet_type='sT', pipe=None):
+    def __init__(self, port, baud=115200, packet_type='gN', pipe=None):
         self.port = port
         self.baud = baud
         self.physical_port = True
@@ -108,7 +112,163 @@ class rtk330l:
     def parse_packet(self, payload):
         data = self.parser(payload[3::])
         return data
+
+    def parse_s1(self, payload):
+        gps_week = (math.pow(4, 12) * payload[0] + math.pow(4, 8) * payload[1] + \
+            math.pow(4, 4) * payload[2] + payload[3])
+
+        time_of_week = (math.pow(4, 28) * payload[4] + math.pow(4, 24) * payload[5] + \
+            math.pow(4, 20) * payload[6] + math.pow(4,16) * payload[7] + math.pow(4, 12) * \
+            payload[8] + math.pow(4, 8) * payload[9] + math.pow(4, 4) * payload[10] + \
+            payload[11]) * 1000
+
+        accels = [0 for x in range(3)]
+        for i in range(3):
+            accels[i] = (math.pow(4, 12) * payload[4*i+12] + math.pow(4, 8) * payload[4*i+13] + \
+            math.pow(4, 4) * payload[4*i+14] + payload[4*i+15])
         
+        angles = [0 for x in range(3)]
+        for i in range(3):
+            angles[i] = (math.pow(4, 12) * payload[4*i+16] + math.pow(4, 8) * payload[4*i+17] + \
+            math.pow(4, 4) * payload[4*i+18] + payload[4*i+19])
+
+        return gps_week, time_of_week, accels, angles
+       
+    def parse_s2(self, payload):
+        gps_week = (math.pow(4, 12) * payload[0] + math.pow(4, 8) * payload[1] + \
+            math.pow(4, 4) * payload[2] + payload[3])
+
+        time_of_week = (math.pow(4, 28) * payload[4] + math.pow(4, 24) * payload[5] + \
+            math.pow(4, 20) * payload[6] + math.pow(4,16) * payload[7] + math.pow(4, 12) * \
+            payload[8] + math.pow(4, 8) * payload[9] + math.pow(4, 4) * payload[10] + \
+            payload[11]) * 1000
+
+        accels = [0 for x in range(3)]
+        for i in range(3):
+            accels[i] = (math.pow(4, 12) * payload[4*i+12] + math.pow(4, 8) * payload[4*i+13] + \
+            math.pow(4, 4) * payload[4*i+14] + payload[4*i+15])
+        
+        angles = [0 for x in range(3)]
+        for i in range(3):
+            angles[i] = (math.pow(4, 12) * payload[4*i+16] + math.pow(4, 8) * payload[4*i+17] + \
+            math.pow(4, 4) * payload[4*i+18] + payload[4*i+19])
+
+        return gps_week, time_of_week, accels, angles
+
+    def parse_iN(self, payload):
+        gps_week = (math.pow(4, 12) * payload[0] + math.pow(4, 8) * payload[1] + \
+            math.pow(4, 4) * payload[2] + payload[3])
+
+        time_of_week = (math.pow(4, 28) * payload[4] + math.pow(4, 24) * payload[5] + \
+            math.pow(4, 20) * payload[6] + math.pow(4,16) * payload[7] + math.pow(4, 12) * \
+            payload[8] + math.pow(4, 8) * payload[9] + math.pow(4, 4) * payload[10] + \
+            payload[11]) 
+        
+        ins_status = payload[12]
+        ins_pos_status = payload[13]
+
+        latitude = (math.pow(4, 12) * payload[14] + math.pow(4, 8) * payload[15] + \
+            math.pow(4, 4) * payload[16] + payload[17]) * (180 / (math.pow(2,31)))
+
+        longitude = (math.pow(4, 12) * payload[18] + math.pow(4, 8) * payload[19] + \
+            math.pow(4, 4) * payload[20] + payload[21]) * (180 / (math.pow(2,31)))
+        
+        hight = (math.pow(4, 12) * payload[22] + math.pow(4, 8) * payload[23] + \
+            math.pow(4, 4) * payload[24] + payload[25])
+
+        velocity_north = (math.pow(4, 4) * payload[26] + payload[27])
+        velocity_east = (math.pow(4, 4) * payload[28] + payload[29])
+        velocity_up = (math.pow(4, 4) * payload[30] + payload[31])
+
+        roll = (math.pow(4, 4) * payload[32] + payload[33])    
+        pitch = (math.pow(4, 4) * payload[34] + payload[35]) 
+        head = (math.pow(4,4) * payload[36] + payload[37]) 
+
+        return gps_week, time_of_week, ins_status, ins_pos_status, latitude, longitude, hight, velocity_north, \
+            velocity_east, velocity_up, roll, pitch, head
+    
+    def parse_d1(self, payload):
+        gps_week = (math.pow(4, 12) * payload[0] + math.pow(4, 8) * payload[1] + \
+            math.pow(4, 4) * payload[2] + payload[3]) 
+
+        time_of_week = (math.pow(4, 28) * payload[4] + math.pow(4, 24) * payload[5] + \
+            math.pow(4, 20) * payload[6] + math.pow(4,16) * payload[7] + math.pow(4, 12) * \
+            payload[8] + math.pow(4, 8) * payload[9] + math.pow(4, 4) * payload[10] + \
+            payload[11])
+        
+        latitude = (math.pow(4, 4) * payload[12] + payload[13]) / 100
+        longitude = (math.pow(4, 4) * payload[14] + payload[15]) / 100
+        hight = (math.pow(4, 4) * payload[16] + payload[17]) / 100 
+
+        velocity_north = (math.pow(4, 4) * payload[18] + payload[19]) / 100 
+        velocity_east = (math.pow(4, 4) * payload[20] + payload[21]) / 100
+        velocity_up = (math.pow(4, 4) * payload[22] + payload[23]) / 100
+
+        roll = (math.pow(4, 4) * payload[24] + payload[25]) / 100 
+        pitch = (math.pow(4, 4) * payload[26] + payload[27]) / 100
+        head = (math.pow(4, 4) * payload[28] + payload[29]) / 100
+
+        return gps_week, time_of_week, latitude, longitude, hight, velocity_north, velocity_east, velocity_up, roll, pitch, head
+
+    def parse_d2(self, payload):
+        gps_week = (math.pow(4, 12) * payload[0] + math.pow(4, 8) * payload[1] + \
+            math.pow(4, 4) * payload[2] + payload[3]) 
+
+        time_of_week = (math.pow(4, 28) * payload[4] + math.pow(4, 24) * payload[5] + \
+            math.pow(4, 20) * payload[6] + math.pow(4,16) * payload[7] + math.pow(4, 12) * \
+            payload[8] + math.pow(4, 8) * payload[9] + math.pow(4, 4) * payload[10] + \
+            payload[11])
+
+        latitude = (math.pow(4, 4) * payload[12] + payload[13]) / 100 
+        longitude = (math.pow(4, 4) * payload[14] + payload[15]) / 100 
+        hight = (math.pow(4, 4) * payload[16] + payload[17]) / 100
+
+        velocity_north = (math.pow(4, 4) * payload[18] + payload[19]) / 100
+        velocity_east = (math.pow(4, 4) * payload[20] + payload[21]) / 100 
+        velocity_up = (math.pow(4, 4) * payload[22] + payload[23]) /100
+
+        return gps_week, time_of_week, latitude, longitude, hight, velocity_north, velocity_east, velocity_up
+
+    def parse_gN(self, payload):
+        gps_week = (math.pow(4, 12) * payload[0] + math.pow(4, 8) * payload[1] + \
+            math.pow(4, 4) * payload[2] + payload[3]) 
+
+        time_of_week = (math.pow(4, 28) * payload[4] + math.pow(4, 24) * payload[5] + \
+            math.pow(4, 20) * payload[6] + math.pow(4,16) * payload[7] + math.pow(4, 12) * \
+            payload[8] + math.pow(4, 8) * payload[9] + math.pow(4, 4) * payload[10] + \
+            payload[11])
+
+        pos_mode = payload[12]
+        
+        latitude = (math.pow(4, 12) * payload[13] + math.pow(4, 8) * payload[14] + \
+            math.pow(4, 4) * payload[15] + payload[16]) * (8 / math.pow(2, 31))
+
+        longitude = (math.pow(4, 12) * payload[17] + math.pow(4, 8) * payload[18] + \
+            math.pow(4, 4) * payload[19] + payload[20]) * (8 / math.pow(2, 31))
+
+        hight = (math.pow(4, 12) * payload[21] + math.pow(4, 8) * payload[22] + \
+            math.pow(4, 4) * payload[23] + payload[24]) * (8 / math.pow(2, 31)) 
+        
+        num_of_SVs = payload[25]
+
+        hdop = (math.pow(4, 12) * payload[26] + math.pow(4, 8) * payload[27] + \
+            math.pow(4, 4) * payload[28] + payload[29]) * (8 / math.pow(2, 31)) 
+        
+        vdop = (math.pow(4, 12) * payload[30] + math.pow(4, 8) * payload[31] + \
+            math.pow(4, 4) * payload[32] + payload[33]) * (8 / math.pow(2, 31)) 
+
+        tdop = (math.pow(4, 12) * payload[34] + math.pow(4, 8) * payload[35] + \
+            math.pow(4, 4) * payload[36] + payload[37]) * (8 / math.pow(2, 31)) 
+
+        diffage = (math.pow(4,4) * payload[38] + payload[39])
+
+        velocity_north = (math.pow(4,4) * payload[40] + payload[41])
+        velocity_east = (math.pow(4,4) * payload[42] + payload[43])
+        velocity_up = (math.pow(4,4) * payload[44] + payload[45])
+
+        return gps_week, time_of_week, pos_mode, latitude, longitude, hight, num_of_SVs, hdop, vdop, tdop, \
+            diffage, velocity_north, velocity_east, velocity_up
+
     def parse_sT(self, payload):
         gps_week = (math.pow(4, 12) * payload[0] + math.pow(4, 8) * payload[1] + \
             math.pow(4, 4) * payload[2] + payload[3]) 
@@ -180,7 +340,7 @@ class rtk330l:
 if __name__ == "__main__":
     port = 'COM3'
     baud = 115200
-    packet_type = 'sT'
+    packet_type = 'gN'
 
     num_of_args = len(sys.argv)
     if num_of_args > 1:
