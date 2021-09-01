@@ -79,16 +79,18 @@ class rtk330l:
             self.bf[self.nbf] = data[i]
             self.nbf += 1
             while self.nbf >= self.size:
+                # print(self.bf[0], preamble[0], self.bf[0] == preamble[0])
                 if self.bf[0] == preamble[0] and self.bf[1] == preamble[1] and\
                     self.bf[2] == self.header[0] and self.bf[3] == self.header[1]:
                     # crc
                     packet_crc = 256 * self.bf[self.size-2] + self.bf[self.size-1]
                     calculated_crc = self.calc_crc(self.bf[2:self.bf[4]+5])
                     # decode
+                    # print(packet_crc, calculated_crc)
                     if packet_crc == calculated_crc:
                         self.latest = self.parse_packet(self.bf[2:self.bf[4]+5])
-                        if self.latest[0]%5 == 0:
-                            print(self.latest) 
+                        # if self.latest[0]%5 == 0:
+                        print(time.time(), self.latest) 
                         if self.pipe is not None:
                             self.pipe.send(self.latest)
                         self.nbf -= self.size
@@ -338,9 +340,9 @@ class rtk330l:
         return crc
 
 if __name__ == "__main__":
-    port = 'COM3'
-    baud = 115200
-    packet_type = 'gN'
+    port = '/dev/ttyUSB0'
+    baud = 230400
+    packet_type = 'sT'
 
     num_of_args = len(sys.argv)
     if num_of_args > 1:
